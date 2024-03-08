@@ -132,27 +132,32 @@ public class EnemyStateAI : MonoBehaviour
     // patrol method
     public void PatrolState()
     {
+       
         if (!isWaiting)
         {
             enemyColor.material.color = Color.cyan;
+            
             agent.SetDestination(target.position);
             distanceToPoint = Vector3.Distance(transform.position, target.position);
 
             // If the enemy reaches the patrol point
-            if (distanceToPoint <= 1f)
+            if (distanceToPoint <= 3f)
             {
                 // Start waiting
                 isWaiting = true;
                 waitTimer = patrolDelay;
+                Debug.Log("Started waiting");
             }
         }
         else
         {
             // If waiting, decrease the timer
+            Debug.Log("Countdown started");
             waitTimer -= Time.deltaTime;
             if (waitTimer <= 0)
             {
                 // Move to the next patrol point
+                Debug.Log("Next patrol point");
                 currentPatrolPoint++;
                 if (currentPatrolPoint == patrolLocations.Length)
                 {
@@ -166,6 +171,7 @@ public class EnemyStateAI : MonoBehaviour
             }
         }
     }
+    
 
 
     public void ChasePlayer()
@@ -205,7 +211,13 @@ public class EnemyStateAI : MonoBehaviour
             agent.SetDestination(lastSeenLocation);
         }
 
-        
+
+        // Reset search time when transitioning from another state to search state
+        if (currentState != EnemyStates.search)
+        {
+            enemySearchTime = 10f; // Reset the search time
+        }
+
         enemySearchTime -= Time.deltaTime;
 
         if (enemySearchTime <= 0)
