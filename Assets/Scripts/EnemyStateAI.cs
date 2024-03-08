@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.AI;
 using TMPro;
+using System.Collections;
 
 public class EnemyStateAI : MonoBehaviour
 {
@@ -46,9 +47,15 @@ public class EnemyStateAI : MonoBehaviour
     [Header("Change search time")]
     
     [SerializeField] private float enemySearchTime = 10f;
-    
+
+    // Delay between patrol points
+    [Header("Patrol wait time")]
+    [SerializeField] private float patrolDelay = 2f;
+    private float waitTimer = 0f;
+    private bool isWaiting = false;
+
     // Change enemies color based on state   
-    
+
     Renderer enemyColor;
   
     // HUD Text
@@ -95,8 +102,11 @@ public class EnemyStateAI : MonoBehaviour
                 break;
 
         }
+
+
         // This changes the HUD text to show what state the enemy is in
         stateText.text = "Enemy State: " + currentState.ToString();
+        
     }
     public void ChangeState()
     {
@@ -118,29 +128,46 @@ public class EnemyStateAI : MonoBehaviour
             currentState = EnemyStates.attack;
         }
     }
-    
+
     // patrol method
     public void PatrolState()
     {
-        
-        enemyColor.material.color = Color.cyan;
-        agent.SetDestination(target.position);
-        distanceToPoint = Vector3.Distance(transform.position, target.position);
-        
-        
-        if (distanceToPoint <= 1f)
+        if (!isWaiting)
         {
-            // Will change patrol point based on distance
-            currentPatrolPoint++;
-            if (currentPatrolPoint == patrolLocations.Length)
-            {
-                currentPatrolPoint = 0;
-            }
-            target = patrolLocations[currentPatrolPoint];
-        }
+            enemyColor.material.color = Color.cyan;
+            agent.SetDestination(target.position);
+            distanceToPoint = Vector3.Distance(transform.position, target.position);
 
+            // If the enemy reaches the patrol point
+            if (distanceToPoint <= 1f)
+            {
+                // Start waiting
+                isWaiting = true;
+                waitTimer = patrolDelay;
+            }
+        }
+        else
+        {
+            // If waiting, decrease the timer
+            waitTimer -= Time.deltaTime;
+            if (waitTimer <= 0)
+            {
+                // Move to the next patrol point
+                currentPatrolPoint++;
+                if (currentPatrolPoint == patrolLocations.Length)
+                {
+                    currentPatrolPoint = 0;
+                }
+                target = patrolLocations[currentPatrolPoint];
+
+                // Stop waiting and resume patrolling
+                isWaiting = false;
+                agent.SetDestination(target.position);
+            }
+        }
     }
-    
+
+
     public void ChasePlayer()
     {
         enemyColor.material.color = Color.red;
@@ -161,34 +188,53 @@ public class EnemyStateAI : MonoBehaviour
             currentState = EnemyStates.chase;
         }
     }
-    
+
     public void SearchArea()
     {
         enemyColor.material.color = Color.green;
-        
+
         if (!enemySearching)
         {
             lastSeenLocation = player.position;
             enemySearching = true;
         }
-        
+
         float DistToPlayer = Vector3.Distance(transform.position, lastSeenLocation);
         if (DistToPlayer > 0.1f)
         {
             agent.SetDestination(lastSeenLocation);
         }
-        // Will be searching for set time 
+
+        
         enemySearchTime -= Time.deltaTime;
-        
-        
+
         if (enemySearchTime <= 0)
         {
-            currentState = EnemyStates.retreat;
+            
+            float closestDistance = float.MaxValue;
+            int closestPatrolPointIndex = 0;
+
+            for (int i = 0; i < patrolLocations.Length; i++)
+            {
+                float distanceToPatrolPoint = Vector3.Distance(transform.position, patrolLocations[i].position);
+                if (distanceToPatrolPoint < closestDistance)
+                {
+                    closestDistance = distanceToPatrolPoint;
+                    closestPatrolPointIndex = i;
+                }
+            }
+
+            
+            target = patrolLocations[closestPatrolPointIndex];
+
+            // Change the state to patrol
+            currentState = EnemyStates.patrol;
+
             enemySearching = false;
             enemySearchTime = 10f;
         }
     }
-    
+
     public void Retreat()
     {
         
