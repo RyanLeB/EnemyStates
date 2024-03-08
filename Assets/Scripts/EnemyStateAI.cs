@@ -34,21 +34,29 @@ public class EnemyStateAI : MonoBehaviour
     
     private bool enemySearching;
 
+    // Enemy Values
 
     [Header("Distance Values")]
     
     [SerializeField] private float attackDistance = 4f;
     [SerializeField] private float chaseDistance = 12f;
-    
     private float distanceToPoint;
-    private float enemySearchTime = 20f;
+    
+    
+    [Header("Change search time")]
+    
+    [SerializeField] private float enemySearchTime = 10f;
     
     // Change enemies color based on state   
-  
+    
     Renderer enemyColor;
+  
+    // HUD Text
 
     [Header("HUD Text")]
+
     public TextMeshProUGUI stateText;
+    
 
 
     void Start()
@@ -122,6 +130,7 @@ public class EnemyStateAI : MonoBehaviour
         
         if (distanceToPoint <= 1f)
         {
+            // Will change patrol point based on distance
             currentPatrolPoint++;
             if (currentPatrolPoint == patrolLocations.Length)
             {
@@ -155,31 +164,35 @@ public class EnemyStateAI : MonoBehaviour
     
     public void SearchArea()
     {
-        enemyColor.material.color = Color.yellow;
+        enemyColor.material.color = Color.green;
+        
         if (!enemySearching)
         {
             lastSeenLocation = player.position;
             enemySearching = true;
         }
+        
         float DistToPlayer = Vector3.Distance(transform.position, lastSeenLocation);
         if (DistToPlayer > 0.1f)
         {
             agent.SetDestination(lastSeenLocation);
         }
+        // Will be searching for set time 
         enemySearchTime -= Time.deltaTime;
-        Debug.Log(enemySearchTime);
+        
+        
         if (enemySearchTime <= 0)
         {
             currentState = EnemyStates.retreat;
             enemySearching = false;
-            enemySearchTime = 30f;
+            enemySearchTime = 10f;
         }
     }
     
     public void Retreat()
     {
         
-        enemyColor.material.color = Color.green;
+        enemyColor.material.color = Color.gray;
         agent.SetDestination(target.position);
         distanceToPoint = Vector3.Distance(transform.position, target.position);
         if (distanceToPoint <= 1f)
