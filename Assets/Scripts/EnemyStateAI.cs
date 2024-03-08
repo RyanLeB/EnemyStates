@@ -63,8 +63,10 @@ public class EnemyStateAI : MonoBehaviour
     [Header("HUD Text")]
 
     public TextMeshProUGUI stateText;
-    
 
+    [Header("Retreat time")]
+    private float retreatTimer;
+    [SerializeField] private float retreatDuration = 5f; // Adjust the retreat duration as needed
 
     void Start()
     {
@@ -104,6 +106,7 @@ public class EnemyStateAI : MonoBehaviour
         }
 
 
+       
         // This changes the HUD text to show what state the enemy is in
         stateText.text = "Enemy State: " + currentState.ToString();
         
@@ -211,7 +214,6 @@ public class EnemyStateAI : MonoBehaviour
             agent.SetDestination(lastSeenLocation);
         }
 
-
         // Reset search time when transitioning from another state to search state
         if (currentState != EnemyStates.search)
         {
@@ -222,28 +224,29 @@ public class EnemyStateAI : MonoBehaviour
 
         if (enemySearchTime <= 0)
         {
-            
-            float closestDistance = float.MaxValue;
-            int closestPatrolPointIndex = 0;
+            // Retreat before patrolling again
+            currentState = EnemyStates.retreat;
+            target = patrolLocations[currentPatrolPoint]; // Retreat to the patrol point
+            retreatTimer = retreatDuration; // Start retreat timer
+            enemySearching = false; // Reset searching flag
+            enemySearchTime = 10f; // Reset search time
+        }
 
-            for (int i = 0; i < patrolLocations.Length; i++)
+        // Handle retreat logic
+        if (currentState == EnemyStates.retreat)
+        {
+            Retreat();
+            retreatTimer -= Time.deltaTime;
+            if (retreatTimer <= 0)
             {
-                float distanceToPatrolPoint = Vector3.Distance(transform.position, patrolLocations[i].position);
-                if (distanceToPatrolPoint < closestDistance)
+                currentState = EnemyStates.patrol; // Change state to patrol after retreat
+                currentPatrolPoint++; // Move to the next patrol point
+                if (currentPatrolPoint >= patrolLocations.Length)
                 {
-                    closestDistance = distanceToPatrolPoint;
-                    closestPatrolPointIndex = i;
+                    currentPatrolPoint = 0; // Loop back to the first patrol point if reached the end
                 }
+                target = patrolLocations[currentPatrolPoint]; // Set target to the next patrol point
             }
-
-            
-            target = patrolLocations[closestPatrolPointIndex];
-
-            // Change the state to patrol
-            currentState = EnemyStates.patrol;
-
-            enemySearching = false;
-            enemySearchTime = 10f;
         }
     }
 
@@ -253,9 +256,10 @@ public class EnemyStateAI : MonoBehaviour
         enemyColor.material.color = Color.gray;
         agent.SetDestination(target.position);
         distanceToPoint = Vector3.Distance(transform.position, target.position);
-        if (distanceToPoint <= 1f)
+        if (distanceToPoint <= 3f)
         {
             agent.SetDestination(transform.position);
+            currentState = EnemyStates.patrol; // Change state to patrol once arrived at patrol point
         }
     }
 }
